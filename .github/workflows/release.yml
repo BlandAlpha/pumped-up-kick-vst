@@ -40,19 +40,10 @@ jobs:
       - name: Build
         run: cmake --build build --config Release -j4
 
-      # Never ship a release that silently dropped Intel support.
-      - name: Verify universal binary
-        run: |
-          for target in \
-            build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3/Contents/MacOS/PumpedUpKick \
-            build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component/Contents/MacOS/PumpedUpKick
-          do
-            for slice in arm64 x86_64; do
-              lipo -info "$target" | grep -q "$slice" \
-                || { echo "::error::$target is missing the $slice slice"; exit 1; }
-            done
-            lipo -info "$target"
-          done
+      # Never ship a release that dropped Intel support or demands a macOS
+      # newer than the deployment target.
+      - name: Verify architectures and deployment target
+        run: ./.github/check-macos-binary.sh build
 
       - name: Validate AU (auval)
         run: auval -v aumf Pukk PuAu

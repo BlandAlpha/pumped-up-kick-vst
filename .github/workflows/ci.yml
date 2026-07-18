@@ -30,15 +30,12 @@ jobs:
       - name: Build
         run: cmake --build build --config Release -j4
 
-      # The runner is arm64; this fails the build if the x86_64 slice went
-      # missing, which would silently lock out every Intel Mac user.
-      - name: Verify universal binary
-        run: |
-          for slice in arm64 x86_64; do
-            lipo -info build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3/Contents/MacOS/PumpedUpKick \
-              | grep -q "$slice" || { echo "::error::VST3 is missing the $slice slice"; exit 1; }
-          done
-          lipo -info build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component/Contents/MacOS/PumpedUpKick
+      # Both of these regress silently: the build succeeds and works on the
+      # machine that produced it, while locking out every Intel Mac (missing
+      # slice) or every Mac older than the build machine (minos defaulting to
+      # the host OS when the deployment target does not take effect).
+      - name: Verify architectures and deployment target
+        run: ./.github/check-macos-binary.sh build
 
       - name: Validate AU (auval)
         run: auval -v aumf Pukk PuAu

@@ -45,6 +45,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j8
 ```
 
+macOS builds are universal (arm64 + x86_64) and target macOS 10.13. Both settings are applied *before* `project()` in [CMakeLists.txt](CMakeLists.txt), which is load-bearing: `project()` creates those cache entries itself, so setting them afterwards is silently ignored and you get a host-native, host-OS-only binary that still works fine on the machine that built it. If you have a build directory from before this fix, delete it — a stale cache keeps the old values no matter what the CMakeLists says.
+
 On macOS the AU and VST3 are copied automatically to:
 
 - `~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component` (Logic Pro)

@@ -43,6 +43,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release -j8
 ```
 
+macOS 构建产物是通用二进制(arm64 + x86_64),最低系统要求为 macOS 10.13。这两项设置在 [CMakeLists.txt](CMakeLists.txt) 中必须写在 `project()` **之前**,这一点至关重要:`project()` 自身就会创建这两个缓存条目,写在其后的设置会被静默忽略,结果是产出一个只支持本机架构、且最低系统版本等于构建机系统版本的二进制——而它在构建者自己的机器上一切正常,毫无异样。如果你有本次修复之前遗留的构建目录,请直接删除:陈旧的缓存会一直保留旧值,无论 CMakeLists 怎么改都不会生效。
+
 在 macOS 上,AU 和 VST3 会被自动拷贝到:
 
 - `~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component`(Logic Pro)
