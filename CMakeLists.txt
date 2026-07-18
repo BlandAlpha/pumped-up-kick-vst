@@ -43,6 +43,14 @@ target_sources(PumpedUpKick PRIVATE
     src/PluginEditor.cpp
 )
 
+# Special Gothic (SIL OFL 1.1, see src/font/OFL.txt) compiled into the binary
+# so the UI never depends on fonts installed on the user's system.
+juce_add_binary_data(PumpedUpKickAssets
+    SOURCES
+        src/font/SpecialGothic-Medium.ttf
+        src/font/SpecialGothicCondensedOne-Regular.ttf
+)
+
 target_compile_definitions(PumpedUpKick PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
@@ -52,6 +60,7 @@ target_compile_definitions(PumpedUpKick PUBLIC
 
 target_link_libraries(PumpedUpKick
     PRIVATE
+        PumpedUpKickAssets
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC

@@ -44,7 +44,7 @@ PumpedUpKickEditor::PumpedUpKickEditor (PumpedUpKickProcessor& p)
         addAndMakeVisible (knob);
 
         label.setJustificationType (juce::Justification::centred);
-        label.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+        label.setFont (lookAndFeel.getLabelFont (11.0f));
         addAndMakeVisible (label);
     };
     setupKnob (mixKnob, mixLabel);
@@ -89,7 +89,7 @@ PumpedUpKickEditor::PumpedUpKickEditor (PumpedUpKickProcessor& p)
         attachment->sendInitialUpdate();
 
         label.setJustificationType (juce::Justification::centred);
-        label.setFont (juce::Font (juce::FontOptions (11.0f, juce::Font::bold)));
+        label.setFont (lookAndFeel.getLabelFont (11.0f));
         addAndMakeVisible (label);
     };
 
@@ -132,7 +132,7 @@ void PumpedUpKickEditor::paint (juce::Graphics& g)
 
     auto header = getLocalBounds().removeFromTop (44).reduced (14, 0);
     g.setColour (Palette::text);
-    g.setFont (juce::Font (juce::FontOptions (17.0f, juce::Font::bold)));
+    g.setFont (lookAndFeel.getLogoFont (23.0f));
     g.drawText ("PUMPED UP KICK", header, juce::Justification::centredLeft);
 }
 

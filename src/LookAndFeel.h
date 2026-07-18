@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "BinaryData.h"
 
 //==============================================================================
 // Palette + minimal flat look. Everything vector-drawn, no image resources.
@@ -24,6 +25,18 @@ class PukLookAndFeel : public juce::LookAndFeel_V4
 public:
     PukLookAndFeel()
     {
+        // Special Gothic (SIL OFL 1.1) is compiled in via BinaryData, so the
+        // UI renders identically regardless of what the host system has
+        // installed. Medium is the default for every control; the Condensed
+        // display cut is reserved for the logo.
+        medium    = juce::Typeface::createSystemTypefaceFor (
+                        BinaryData::SpecialGothicMedium_ttf,
+                        BinaryData::SpecialGothicMedium_ttfSize);
+        condensed = juce::Typeface::createSystemTypefaceFor (
+                        BinaryData::SpecialGothicCondensedOneRegular_ttf,
+                        BinaryData::SpecialGothicCondensedOneRegular_ttfSize);
+        setDefaultSansSerifTypeface (medium);
+
         setColour (juce::ResizableWindow::backgroundColourId, Palette::background);
         setColour (juce::ComboBox::backgroundColourId, Palette::panelLight);
         setColour (juce::ComboBox::textColourId, Palette::text);
@@ -88,11 +101,30 @@ public:
 
     juce::Font getComboBoxFont (juce::ComboBox&) override
     {
+        return juce::Font (juce::FontOptions (15.0f));
+    }
+
+    // Medium already carries its weight — no synthetic bold on top of it.
+    juce::Font getTextButtonFont (juce::TextButton&, int) override
+    {
         return juce::Font (juce::FontOptions (14.0f));
     }
 
-    juce::Font getTextButtonFont (juce::TextButton&, int) override
+    // Condensed all-caps display cut; a touch of tracking opens it up.
+    juce::Font getLogoFont (float height) const
     {
-        return juce::Font (juce::FontOptions (13.0f, juce::Font::bold));
+        return juce::Font (juce::FontOptions().withTypeface (condensed)
+                                              .withHeight (height))
+                   .withExtraKerningFactor (0.06f);
     }
+
+    juce::Font getLabelFont (float height) const
+    {
+        return juce::Font (juce::FontOptions().withTypeface (medium)
+                                              .withHeight (height))
+                   .withExtraKerningFactor (0.08f);
+    }
+
+private:
+    juce::Typeface::Ptr medium, condensed;
 };

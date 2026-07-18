@@ -6,6 +6,8 @@ A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow 
 
 **AU / VST3 / Standalone** · macOS & Windows · built with [JUCE 8](https://juce.com) (AGPLv3)
 
+![Screenshot of this VST Plugin](/readme-assets/PUK.png)
+
 ## Features
 
 - **One-knob workflow** — pick a preset, set the rate, turn the Mix knob. Done.
@@ -25,14 +27,14 @@ A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow 
 
 Grab a zip from [Releases](../../releases). macOS builds are universal binaries (Apple Silicon + Intel).
 
-**macOS — the quarantine step is required.** This is free software built without a paid Apple Developer ID ($99/year), so the binaries are not notarized. macOS quarantines anything downloaded from the web and your DAW will silently refuse to load it. After copying the plugins into place, run:
+**macOS — the quarantine step is required.** This is free software built without a paid Apple Developer ID, so the binaries are not notarized. macOS quarantines anything downloaded from the web and your DAW will silently refuse to load it. After copying the plugins into place, run:
 
 ```sh
 xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component
 xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
 ```
 
-The commonly suggested "right-click → Open" workaround does **not** apply to plugins — that only works for `.app` bundles. If you'd rather not run the command, build from source instead: locally compiled binaries carry no quarantine flag and just work.
+If you'd rather not run the command, build from source instead: locally compiled binaries carry no quarantine flag and just work.
 
 **Windows**: copy `PumpedUpKick.vst3` to `C:\Program Files\Common Files\VST3\`.
 
@@ -97,6 +99,8 @@ Builds are unsigned (see Distribution notes above); signing/notarization would n
 Copyright (C) 2026 CanisAlpha
 
 PumpedUpKick is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
+
+The UI embeds the [Special Gothic](https://github.com/AlistairMcCready/Special-Gothic/) typeface, Copyright 2023 The Special Gothic Project Authors, licensed under the [SIL Open Font License 1.1](src/font/OFL.txt).
 
 ## User presets
 
