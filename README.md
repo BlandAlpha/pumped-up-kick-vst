@@ -8,8 +8,6 @@ A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow 
 
 **AU / VST3 / Standalone** · macOS & Windows · built with [JUCE 8](https://juce.com) (AGPLv3)
 
-![Screenshot of this VST Plugin](/readme-assets/PUK.png)
-
 ## Features
 
 - **One-knob workflow** — pick a preset, set the rate, turn the Mix knob. Done.

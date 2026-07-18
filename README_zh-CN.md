@@ -6,8 +6,6 @@
 
 **AU / VST3 / Standalone** · macOS & Windows · 基于 [JUCE 8](https://juce.com) 构建 (AGPLv3)
 
-![VST截图](/readme-assets/PUK.png)
-
 ## 功能特性
 
 - **单旋钮工作流** —— 选一个预设、设置速率、调整 Mix 旋钮，搞定。

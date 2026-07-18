@@ -118,7 +118,7 @@ public:
     {
         return juce::Font (juce::FontOptions().withTypeface (condensed)
                                               .withHeight (height))
-                   .withExtraKerningFactor (0.03f);
+                   .withExtraKerningFactor (0.0f);
     }
 
     // Small all-caps section captions (MIX / RATE / …).
