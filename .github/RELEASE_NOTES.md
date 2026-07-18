@@ -4,7 +4,7 @@ The first release of **PumpedUpKick** — a free, open-source sidechain-ducking 
 
 - **Insert → preset → done.** BPM-synced volume ducking that locks to your host's timeline (1/1 – 1/16), with a global Mix knob.
 - **Draw your own pump.** Full envelope editor: drag points, double-click to add, right-click to delete, bend segments with their midpoint handles, Shift to snap. Save your shapes as presets.
-- **MIDI one-shot trigger** for anything that isn't four-on-the-floor — each Note-On fires the envelope exactly once, sample-accurately. Per-host routing guides are in the [README](https://github.com/BlandAlpha/pumped-up-kicks-vst#using-the-midi-one-shot-trigger).
+- **MIDI one-shot trigger** for anything that isn't four-on-the-floor — each Note-On fires the envelope exactly once, sample-accurately. Per-host routing guides are in the [README](https://github.com/BlandAlpha/pumped-up-kick-vst#using-the-midi-one-shot-trigger).
 - **See what you're cutting.** Live waveform display shows pre-duck input (grey) against post-duck output (orange) behind the curve.
 - **Practically free CPU.** The audio path is one table lookup and one multiply per sample — no locks, no allocations.
 - 5 factory shapes (Classic / Soft / Tight / Long Pump / Wobble), click-free smoothing, resizable UI set in Special Gothic.
@@ -28,7 +28,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/PumpedUpKick.
 xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
 ```
 
-The "right-click → Open" trick does **not** work for plugins. Full instructions ship inside the zip (`INSTALL.txt`). Prefer not to run commands? [Build from source](https://github.com/BlandAlpha/pumped-up-kicks-vst#building) — two commands, and locally built binaries need no workaround.
+The "right-click → Open" trick does **not** work for plugins. Full instructions ship inside the zip (`INSTALL.txt`). Prefer not to run commands? [Build from source](https://github.com/BlandAlpha/pumped-up-kick-vst#building) — two commands, and locally built binaries need no workaround.
 
 ---
 
@@ -36,7 +36,7 @@ The "right-click → Open" trick does **not** work for plugins. Full instruction
 
 - **BPM 同步压缩**:锁定宿主时间轴(1/1–1/16),全局 Mix 旋钮
 - **自由绘制包络**:拖点 / 双击加点 / 右键删点 / 中点手柄弯曲曲线 / Shift 吸附,可保存自定义预设
-- **MIDI one-shot 触发**:非四四拍场景下,每个音符采样级精确触发一次包络,各宿主路由方法见 [中文 README](https://github.com/BlandAlpha/pumped-up-kicks-vst/blob/main/README_zh-CN.md)
+- **MIDI one-shot 触发**:非四四拍场景下,每个音符采样级精确触发一次包络,各宿主路由方法见 [中文 README](https://github.com/BlandAlpha/pumped-up-kick-vst/blob/main/README_zh-CN.md)
 - **实时波形对比**:压缩前(灰)/压缩后(橙)直接画在曲线背后
 - **接近零的 CPU 占用**:音频路径每采样仅一次查表一次乘法
 
