@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PLUGINVAL_VERSION: v1.0.4
+  # 10 is pluginval's strictest level: parameter fuzzing, thread-safety and
+  # non-realtime checks on top of the basic load/render tests.
+  STRICTNESS: 10
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-macos-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      # The runner is arm64; this fails the build if the x86_64 slice went
+      # missing, which would silently lock out every Intel Mac user.
+      - name: Verify universal binary
+        run: |
+          for slice in arm64 x86_64; do
+            lipo -info build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3/Contents/MacOS/PumpedUpKick \
+              | grep -q "$slice" || { echo "::error::VST3 is missing the $slice slice"; exit 1; }
+          done
+          lipo -info build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component/Contents/MacOS/PumpedUpKick
+
+      - name: Validate AU (auval)
+        run: auval -v aumf Pukk PuAu
+
+      - name: Install pluginval
+        run: |
+          curl -fsSL -o pluginval.zip \
+            "https://github.com/Tracktion/pluginval/releases/download/${PLUGINVAL_VERSION}/pluginval_macOS.zip"
+          unzip -q pluginval.zip
+          echo "PLUGINVAL=$PWD/pluginval.app/Contents/MacOS/pluginval" >> "$GITHUB_ENV"
+
+      - name: Validate plugins (pluginval)
+        run: |
+          "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
+            --validate build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3
+          "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
+            --validate build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-windows-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Install pluginval
+        shell: pwsh
+        run: |
+          curl.exe -fsSL -o pluginval.zip `
+            "https://github.com/Tracktion/pluginval/releases/download/$env:PLUGINVAL_VERSION/pluginval_Windows.zip"
+          Expand-Archive -Path pluginval.zip -DestinationPath pluginval -Force
+          echo "PLUGINVAL=$PWD\pluginval\pluginval.exe" >> $env:GITHUB_ENV
+
+      - name: Validate plugin (pluginval)
+        shell: pwsh
+        run: |
+          & $env:PLUGINVAL --strictness-level $env:STRICTNESS --verbose --skip-gui-tests `
+            --validate "build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

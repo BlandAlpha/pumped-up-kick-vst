@@ -19,6 +19,21 @@
 - **平滑控制** —— 无爆音的增益平滑处理 (0.1–20 ms)。
 - **极小的资源占用** —— 包络被渲染进一张无锁查找表;音频路径每采样只做一次查表和一次乘法,没有内存分配、没有锁、没有 FFT。
 
+## 安装(下载预编译版本)
+
+从 [Releases](../../releases) 页面下载 zip 包。macOS 版本是通用二进制(同时支持 Apple Silicon 与 Intel)。
+
+**macOS —— 解除隔离属性这一步是必须的。** 本项目是免费软件,没有购买 Apple 开发者账号($99/年),因此二进制文件未经 Apple 公证。macOS 会给一切从网上下载的文件打上隔离标记,你的宿主软件会直接拒绝加载。把插件拷贝到位之后,请在终端执行:
+
+```sh
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
+```
+
+网上常见的"右键 → 打开"绕过方法对插件**无效**,那个办法只适用于 `.app` 程序包。如果你不想执行命令行,也可以选择自行从源码编译:本地编译出来的产物不带隔离属性,装上就能直接使用。
+
+**Windows**:把 `PumpedUpKick.vst3` 拷贝到 `C:\Program Files\Common Files\VST3\`。
+
 ## 编译构建
 
 依赖要求:CMake ≥ 3.24,支持 C++17 的编译器(macOS 上的 Xcode 命令行工具,Windows 上的 MSVC)。JUCE 会被自动拉取。
@@ -51,6 +66,27 @@ cmake --build build --config Release -j8
   未签名的本地构建在自己机器上可以正常使用(Gatekeeper 只检查从网络下载的二进制文件)。
 - **Windows**:使用 MSVC 构建(`cmake -G "Visual Studio 17 2022"`);代码签名可选。
 - **许可证**:JUCE 以 AGPLv3 协议使用,因此本项目同样采用 AGPLv3 —— 源代码必须保持公开可用。VST3 支持基于 Steinberg 的 VST3 SDK(与 GPLv3 兼容)。"VST" 是 Steinberg Media Technologies GmbH 的注册商标。
+
+## 自动化构建与发布
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) 在**每次**向 `main` 推送或提交 PR 时运行,构建两个平台。它不只检查"能否编译通过",而是真的把插件加载起来跑一遍:
+
+- `lipo` 断言 `arm64` 与 `x86_64` 两个切片都存在,确保发布版本绝不会悄无声息地丢掉对 Intel Mac 的支持
+- `auval`(macOS)会实例化 AU、渲染音频并测试 MIDI 处理
+- [pluginval](https://github.com/Tracktion/pluginval) 以最严格的 10 级强度,对 macOS 上的 AU 与 VST3、Windows 上的 VST3 执行参数模糊测试、总线布局与线程安全检查
+
+[.github/workflows/release.yml](.github/workflows/release.yml) 会跑同样的校验流程,然后在你推送版本标签时打包并准备发布:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+注意普通的 `git push` 永远不会推送标签,所以日常提交不可能误触发发布。Release 会被创建为**草稿**,自动生成的说明(自上个标签以来的提交记录)和 zip 附件都已就绪——你把说明改写成面向用户的文案,再点击发布即可。
+
+如果只想验证构建是否成功而不打标签,可以在 Actions 页面手动触发工作流(`workflow_dispatch`),它只产出可下载的构建产物,完全不碰 Release。
+
+目前产物是未签名的(参见上方"分发说明");如需签名/公证,需要在仓库中配置证书密钥,目前尚未接入。
 
 ## 许可证
 

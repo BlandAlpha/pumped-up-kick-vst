@@ -21,6 +21,21 @@ A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow 
 - **Smooth control** — click-free gain smoothing (0.1–20 ms).
 - **Tiny footprint** — the envelope renders to a lock-free lookup table; the audio path is one table read and one multiply per sample. No allocations, no locks, no FFT.
 
+## Installing (pre-built downloads)
+
+Grab a zip from [Releases](../../releases). macOS builds are universal binaries (Apple Silicon + Intel).
+
+**macOS — the quarantine step is required.** This is free software built without a paid Apple Developer ID ($99/year), so the binaries are not notarized. macOS quarantines anything downloaded from the web and your DAW will silently refuse to load it. After copying the plugins into place, run:
+
+```sh
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
+```
+
+The commonly suggested "right-click → Open" workaround does **not** apply to plugins — that only works for `.app` bundles. If you'd rather not run the command, build from source instead: locally compiled binaries carry no quarantine flag and just work.
+
+**Windows**: copy `PumpedUpKick.vst3` to `C:\Program Files\Common Files\VST3\`.
+
 ## Building
 
 Requirements: CMake ≥ 3.24, a C++17 compiler (Xcode command-line tools on macOS, MSVC on Windows). JUCE is fetched automatically.
@@ -53,6 +68,27 @@ Insert PumpedUpKick as a **MIDI-controlled effect** (instrument slot → *AU MID
   Unsigned local builds work fine on your own machine (Gatekeeper only checks downloaded binaries).
 - **Windows**: build with MSVC (`cmake -G "Visual Studio 17 2022"`); code signing optional.
 - **License**: JUCE is used under AGPLv3, so this project is AGPLv3 — source must remain available. VST3 support is via Steinberg's VST3 SDK (GPLv3-compatible). "VST" is a trademark of Steinberg Media Technologies GmbH.
+
+## Automated builds & releases
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on **every** push/PR to `main` and builds both platforms. It doesn't just check that the code compiles — it loads the plugin and exercises it:
+
+- `lipo` asserts both `arm64` and `x86_64` slices are present, so a release can never silently drop Intel support
+- `auval` (macOS) instantiates the AU, renders audio and tests MIDI handling
+- [pluginval](https://github.com/Tracktion/pluginval) at strictness level 10 runs parameter fuzzing, bus-layout and thread-safety checks against the AU and VST3 on macOS, and the VST3 on Windows
+
+[.github/workflows/release.yml](.github/workflows/release.yml) runs the same validation, then packages and stages a release when you push a version tag:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Note that a plain `git push` never pushes tags, so normal commits can't trigger a release by accident. The release is created as a **draft** with auto-generated notes (the commits since the last tag) and the zips already attached — rewrite the notes into something user-facing, then hit publish.
+
+To sanity-check a build without tagging, run the workflow manually from the Actions tab (`workflow_dispatch`). That produces downloadable artifacts but never touches releases.
+
+Builds are unsigned (see Distribution notes above); signing/notarization would need certificate secrets added to the repo and isn't wired up.
 
 ## License
 

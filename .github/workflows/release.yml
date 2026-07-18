@@ -1,0 +1,162 @@
+name: Release
+
+# Tag pushes (v1.2.3) build both platforms and stage a DRAFT GitHub Release
+# with zipped plugin bundles attached — review the notes, then publish by hand.
+# workflow_dispatch runs the same build without touching releases at all, so
+# you can sanity-check artifacts before committing to a tag.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label for a manual test build (not published as a release)"
+        required: false
+        default: "v0.0.0-dev"
+
+permissions:
+  contents: write
+
+env:
+  PLUGINVAL_VERSION: v1.0.4
+  STRICTNESS: 10
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-macos-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      # Never ship a release that silently dropped Intel support.
+      - name: Verify universal binary
+        run: |
+          for target in \
+            build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3/Contents/MacOS/PumpedUpKick \
+            build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component/Contents/MacOS/PumpedUpKick
+          do
+            for slice in arm64 x86_64; do
+              lipo -info "$target" | grep -q "$slice" \
+                || { echo "::error::$target is missing the $slice slice"; exit 1; }
+            done
+            lipo -info "$target"
+          done
+
+      - name: Validate AU (auval)
+        run: auval -v aumf Pukk PuAu
+
+      - name: Install pluginval
+        run: |
+          curl -fsSL -o pluginval.zip \
+            "https://github.com/Tracktion/pluginval/releases/download/${PLUGINVAL_VERSION}/pluginval_macOS.zip"
+          unzip -q pluginval.zip
+          echo "PLUGINVAL=$PWD/pluginval.app/Contents/MacOS/pluginval" >> "$GITHUB_ENV"
+
+      - name: Validate plugins (pluginval)
+        run: |
+          "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
+            --validate build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3
+          "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
+            --validate build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component
+
+      - name: Package
+        env:
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+        run: |
+          STAGE="PumpedUpKick-macOS-${VERSION}"
+          mkdir -p "$STAGE"
+          cp -R build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component "$STAGE"/
+          cp -R build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3 "$STAGE"/
+          cp -R build/PumpedUpKick_artefacts/Release/Standalone/PumpedUpKick.app "$STAGE"/
+          cp LICENSE README.md "$STAGE"/
+          cp .github/INSTALL-macOS.txt "$STAGE"/INSTALL.txt
+          # --keepParent so unzipping yields a tidy folder rather than spilling
+          # bundles loose into the user's Downloads directory.
+          ditto -c -k --sequesterRsrc --keepParent "$STAGE" "${STAGE}.zip"
+          echo "ARTIFACT=${STAGE}.zip" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: ${{ env.ARTIFACT }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-windows-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Install pluginval
+        shell: pwsh
+        run: |
+          curl.exe -fsSL -o pluginval.zip `
+            "https://github.com/Tracktion/pluginval/releases/download/$env:PLUGINVAL_VERSION/pluginval_Windows.zip"
+          Expand-Archive -Path pluginval.zip -DestinationPath pluginval -Force
+          echo "PLUGINVAL=$PWD\pluginval\pluginval.exe" >> $env:GITHUB_ENV
+
+      - name: Validate plugin (pluginval)
+        shell: pwsh
+        run: |
+          & $env:PLUGINVAL --strictness-level $env:STRICTNESS --verbose --skip-gui-tests `
+            --validate "build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package
+        shell: pwsh
+        env:
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+        run: |
+          $stage = "PumpedUpKick-Windows-$env:VERSION"
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Copy-Item -Recurse "build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3" "$stage/"
+          Copy-Item "build/PumpedUpKick_artefacts/Release/Standalone/PumpedUpKick.exe" "$stage/"
+          Copy-Item LICENSE,README.md "$stage/"
+          Compress-Archive -Path $stage -DestinationPath "$stage.zip"
+          echo "ARTIFACT=$stage.zip" >> $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: ${{ env.ARTIFACT }}
+
+  publish:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # Staged as a draft: auto-generated notes list the commits since the last
+      # tag, which you can rewrite into user-facing release notes before
+      # publishing. The binaries are already uploaded and ready.
+      - name: Stage draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
+          draft: true

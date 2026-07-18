@@ -1,0 +1,52 @@
+PumpedUpKick — macOS 安装说明 / Installation Notes
+====================================================
+
+[中文]
+
+1. 拷贝插件到以下位置:
+
+   PumpedUpKick.component  ->  ~/Library/Audio/Plug-Ins/Components/
+   PumpedUpKick.vst3       ->  ~/Library/Audio/Plug-Ins/VST3/
+
+2. 【必须】解除 macOS 隔离属性。
+
+   本插件是免费开源软件,没有购买 Apple 开发者账号($99/年),因此
+   没有经过 Apple 公证。从网上下载的文件会被 macOS 打上隔离标记,
+   Logic / FL Studio 会拒绝加载。请在"终端"中执行:
+
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
+
+   注意:插件不能用"右键 -> 打开"的方式绕过,那个方法只对 App 有效。
+
+3. 重启宿主软件。Logic 启动时会重新扫描插件。
+   如果仍未出现,在终端执行 auval -a 强制刷新 AU 缓存。
+
+如果你不想执行上述命令,也可以直接从源码自行编译 —— 本地编译的产物
+不带隔离属性,装上即可使用。详见项目 README。
+
+
+[English]
+
+1. Copy the plugins to:
+
+   PumpedUpKick.component  ->  ~/Library/Audio/Plug-Ins/Components/
+   PumpedUpKick.vst3       ->  ~/Library/Audio/Plug-Ins/VST3/
+
+2. [REQUIRED] Remove the macOS quarantine flag.
+
+   This is free open-source software built without a paid Apple Developer
+   ID, so it is not notarized. macOS quarantines downloaded files and your
+   DAW will refuse to load them. Run this in Terminal:
+
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/PumpedUpKick.component
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
+
+   Note: the "right-click -> Open" trick does NOT work for plugins; it only
+   applies to .app bundles.
+
+3. Restart your DAW. Logic rescans plugins on launch; run "auval -a" to
+   force an AudioUnit cache refresh if it still does not show up.
+
+Alternatively, build from source — locally built binaries carry no
+quarantine flag and work immediately. See the project README.
