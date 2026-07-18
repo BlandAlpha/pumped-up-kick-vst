@@ -83,6 +83,61 @@ jobs:
           name: macos-build
           path: ${{ env.ARTIFACT }}
 
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev \
+            libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev xvfb zip
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-linux-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Install pluginval
+        run: |
+          curl -fsSL -o pluginval.zip \
+            "https://github.com/Tracktion/pluginval/releases/download/${PLUGINVAL_VERSION}/pluginval_Linux.zip"
+          unzip -q pluginval.zip
+          chmod +x pluginval
+          echo "PLUGINVAL=$PWD/pluginval" >> "$GITHUB_ENV"
+
+      - name: Validate plugin (pluginval)
+        run: |
+          xvfb-run -a "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
+            --validate build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3
+
+      - name: Package
+        env:
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+        run: |
+          STAGE="PumpedUpKick-Linux-${VERSION}"
+          mkdir -p "$STAGE"
+          cp -r build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3 "$STAGE"/
+          cp build/PumpedUpKick_artefacts/Release/Standalone/PumpedUpKick "$STAGE"/
+          cp LICENSE README.md "$STAGE"/
+          zip -rq "${STAGE}.zip" "$STAGE"
+          echo "ARTIFACT=${STAGE}.zip" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: ${{ env.ARTIFACT }}
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -134,20 +189,23 @@ jobs:
           path: ${{ env.ARTIFACT }}
 
   publish:
-    needs: [build-macos, build-windows]
+    needs: [build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      # Staged as a draft: auto-generated notes list the commits since the last
-      # tag, which you can rewrite into user-facing release notes before
-      # publishing. The binaries are already uploaded and ready.
+      # Staged as a draft with .github/RELEASE_NOTES.md as the body (plus the
+      # auto-generated commit list appended) — review, then hit publish. The
+      # binaries are already uploaded and ready.
       - name: Stage draft release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*.zip
+          body_path: .github/RELEASE_NOTES.md
           generate_release_notes: true
           draft: true

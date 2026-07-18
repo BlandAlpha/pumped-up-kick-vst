@@ -54,6 +54,45 @@ jobs:
           "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
             --validate build/PumpedUpKick_artefacts/Release/AU/PumpedUpKick.component
 
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev \
+            libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libfreetype6-dev libfontconfig1-dev libgl1-mesa-dev xvfb
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-linux-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Install pluginval
+        run: |
+          curl -fsSL -o pluginval.zip \
+            "https://github.com/Tracktion/pluginval/releases/download/${PLUGINVAL_VERSION}/pluginval_Linux.zip"
+          unzip -q pluginval.zip
+          chmod +x pluginval
+          echo "PLUGINVAL=$PWD/pluginval" >> "$GITHUB_ENV"
+
+      # Headless runner: xvfb provides the X display JUCE needs to load.
+      - name: Validate plugin (pluginval)
+        run: |
+          xvfb-run -a "$PLUGINVAL" --strictness-level "$STRICTNESS" --verbose --skip-gui-tests \
+            --validate build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3
+
   build-windows:
     runs-on: windows-latest
     steps:

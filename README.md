@@ -6,7 +6,7 @@
 
 A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow with LFOTool-style envelope control.
 
-**AU / VST3 / Standalone** · macOS & Windows · built with [JUCE 8](https://juce.com) (AGPLv3)
+**AU / VST3 / Standalone** · macOS, Windows & Linux · built with [JUCE 8](https://juce.com) (AGPLv3)
 
 ## Features
 
@@ -38,6 +38,8 @@ If you'd rather not run the command, build from source instead: locally compiled
 
 **Windows**: copy `PumpedUpKick.vst3` to `C:\Program Files\Common Files\VST3\`.
 
+**Linux**: copy `PumpedUpKick.vst3` to `~/.vst3/`. Works in REAPER, Bitwig, Ardour, Qtractor and other VST3 hosts.
+
 ## Building
 
 Requirements: CMake ≥ 3.24, a C++17 compiler (Xcode command-line tools on macOS, MSVC on Windows). JUCE is fetched automatically.
@@ -58,9 +60,31 @@ If Logic doesn't see the AU immediately, run `auval -a` or restart Logic (it res
 
 On Windows, copy `build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3` to `C:\Program Files\Common Files\VST3\`.
 
-### Using it in Logic (MIDI trigger mode)
+## Using the MIDI one-shot trigger
 
-Insert PumpedUpKick as a **MIDI-controlled effect** (instrument slot → *AU MIDI-controlled Effects* → PumpedUp Audio → select the audio track as sidechain… or simply insert it as a normal audio effect and use Sync mode). In FL Studio, route any MIDI channel to the plugin via *MIDI output* port matching, or just use Sync mode.
+Sync mode needs no routing at all — insert the plugin as a normal audio effect and it locks to the beat. The **MIDI trigger** (one-shot) mode is for everything that isn't four-on-the-floor: switch **TRIGGER** to **MIDI**, and the envelope then runs exactly once per incoming Note-On (any pitch, any velocity — both are ignored) with **RATE** setting how long one shot lasts (1/4 = one beat). Between notes, audio passes through untouched. The catch: your DAW has to route MIDI notes *into an audio effect*, and every host does that differently.
+
+**Logic Pro** — audio effects can't receive MIDI in Logic, so load it as a MIDI-controlled effect:
+1. On the track you want ducked, set **Output** to a bus (e.g. Bus 1), and mute the Aux that Logic auto-creates (or set the Aux's output to *No Output*) so you don't hear the dry copy.
+2. Create a **Software Instrument** track and pick **AU MIDI-controlled Effects → PumpedUp Audio → PumpedUpKick** in the instrument slot.
+3. In the plugin window header, set the **Side Chain** menu (top right) to Bus 1.
+4. Play or program notes on the instrument track — each note fires the envelope.
+
+**FL Studio**
+1. Load PumpedUpKick on the mixer insert of the track to duck.
+2. In the plugin wrapper's gear menu → *Settings*, set **MIDI input port** to a number (e.g. 1).
+3. In the Channel Rack, add a **MIDI Out** channel and set its **Port** to the same number. Notes played on that channel now trigger the envelope.
+
+**Ableton Live**
+1. Put PumpedUpKick on the audio track.
+2. Create a MIDI track; set **MIDI To** to the audio track, and in the chooser below it pick **PumpedUpKick**.
+3. Arm the MIDI track and play — clips or live input both work.
+
+**REAPER** — simplest of all: track FX receive the track's own MIDI, so either put MIDI items directly on the audio track, or send MIDI from another track (create a send, set audio channels to *None* and MIDI to *All*).
+
+**Bitwig Studio** — create a note track and set its output chooser to the PumpedUpKick device sitting on your audio track.
+
+**Cubase** — create a MIDI track and pick the PumpedUpKick instance in its output routing dropdown (plugins that accept MIDI are listed there).
 
 ## Distribution notes
 
@@ -75,11 +99,11 @@ Insert PumpedUpKick as a **MIDI-controlled effect** (instrument slot → *AU MID
 
 ## Automated builds & releases
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on **every** push/PR to `main` and builds both platforms. It doesn't just check that the code compiles — it loads the plugin and exercises it:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on **every** push/PR to `main` and builds all three platforms. It doesn't just check that the code compiles — it loads the plugin and exercises it:
 
 - `lipo` asserts both `arm64` and `x86_64` slices are present, so a release can never silently drop Intel support
 - `auval` (macOS) instantiates the AU, renders audio and tests MIDI handling
-- [pluginval](https://github.com/Tracktion/pluginval) at strictness level 10 runs parameter fuzzing, bus-layout and thread-safety checks against the AU and VST3 on macOS, and the VST3 on Windows
+- [pluginval](https://github.com/Tracktion/pluginval) at strictness level 10 runs parameter fuzzing, bus-layout and thread-safety checks against the AU and VST3 on macOS, the VST3 on Windows, and the VST3 on Linux (under `xvfb`)
 
 [.github/workflows/release.yml](.github/workflows/release.yml) runs the same validation, then packages and stages a release when you push a version tag:
 

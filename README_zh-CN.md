@@ -4,7 +4,7 @@
 
 一款免费、轻量的侧链压缩插件 —— 融合 KickStarter 的即插即用工作流与 LFOTool 式的包络控制。
 
-**AU / VST3 / Standalone** · macOS & Windows · 基于 [JUCE 8](https://juce.com) 构建 (AGPLv3)
+**AU / VST3 / Standalone** · macOS、Windows 与 Linux · 基于 [JUCE 8](https://juce.com) 构建 (AGPLv3)
 
 ## 功能特性
 
@@ -35,6 +35,8 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/PumpedUpKick.vst3
 
 **Windows**:把 `PumpedUpKick.vst3` 拷贝到 `C:\Program Files\Common Files\VST3\`。
 
+**Linux**:把 `PumpedUpKick.vst3` 拷贝到 `~/.vst3/`。可在 REAPER、Bitwig、Ardour、Qtractor 等支持 VST3 的宿主中使用。
+
 ## 编译构建
 
 依赖要求:CMake ≥ 3.24，支持 C++17 的编译器(macOS 上的 Xcode 命令行工具，Windows 上的 MSVC)。JUCE 会被自动拉取。
@@ -55,9 +57,31 @@ macOS 构建产物是通用二进制(arm64 + x86_64)，最低系统要求为 mac
 
 在 Windows 上，将 `build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3` 拷贝到 `C:\Program Files\Common Files\VST3\`。
 
-### 在 Logic 中使用(MIDI 触发模式)
+## MIDI one-shot 触发模式使用指南
 
-将 PumpedUpKick 作为 **MIDI 控制效果器**插入(乐器插槽 → *AU MIDI-controlled Effects* → PumpedUp Audio → 将音频轨道设为侧链…;或者直接作为普通音频效果器插入并使用 Sync 模式)。在 FL Studio 中，通过匹配 *MIDI output* 端口将任意 MIDI 通道路由到插件，或者直接使用 Sync 模式即可。
+Sync 模式不需要任何路由——把插件当普通音频效果器插上就自动对拍。**MIDI 触发**(one-shot)模式服务于所有非四四拍的场景:把 **TRIGGER** 切到 **MIDI** 后,每收到一个 Note-On 包络精确跑一遍(任何音高、任何力度都可以,二者均被忽略),**RATE** 决定单次包络的时长(1/4 = 一拍)。音符之间音频原样通过。唯一的门槛在于:你的宿主需要把 MIDI 音符路由*进一个音频效果器*,而每家宿主的做法都不一样。
+
+**Logic Pro** —— Logic 的音频效果器收不到 MIDI,须以 MIDI 控制效果器方式加载:
+1. 在要被压缩的轨道上,把 **Output** 设为某个总线(如 Bus 1),并将 Logic 自动创建的 Aux **静音**(或把 Aux 输出设为 *No Output*),避免听到未处理的原声。
+2. 新建**软件乐器**轨,乐器插槽选 **AU MIDI-controlled Effects → PumpedUp Audio → PumpedUpKick**。
+3. 在插件窗口顶栏右侧的 **Side Chain** 菜单中选择 Bus 1。
+4. 在这条乐器轨上弹奏或写 MIDI 音符——每个音符触发一次包络。
+
+**FL Studio**
+1. 把 PumpedUpKick 加载到目标轨道的混音器插槽上。
+2. 打开插件包装器的齿轮菜单 → *Settings*,把 **MIDI input port** 设为一个编号(如 1)。
+3. 在 Channel Rack 中添加一个 **MIDI Out** 通道,把它的 **Port** 设为相同编号。在该通道上弹奏的音符即可触发包络。
+
+**Ableton Live**
+1. 把 PumpedUpKick 放在音频轨上。
+2. 新建一条 MIDI 轨,把 **MIDI To** 设为那条音频轨,并在下方的选择器里选 **PumpedUpKick**。
+3. 给 MIDI 轨预备录音后即可触发——clip 或现场演奏都可以。
+
+**REAPER** —— 最简单:轨道效果器直接接收本轨的 MIDI,把 MIDI item 放在音频轨上即可;或从其他轨用发送路由 MIDI(创建 send,音频通道设 *None*,MIDI 设 *All*)。
+
+**Bitwig Studio** —— 新建音符轨,把它的输出选择器指向音频轨上的 PumpedUpKick 设备。
+
+**Cubase** —— 新建 MIDI 轨,在输出路由下拉菜单中选择 PumpedUpKick 实例(接受 MIDI 的插件会列在其中)。
 
 ## 分发说明
 
@@ -72,11 +96,11 @@ macOS 构建产物是通用二进制(arm64 + x86_64)，最低系统要求为 mac
 
 ## 自动化构建与发布
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) 在**每次**向 `main` 推送或提交 PR 时运行，构建两个平台。它不只检查"能否编译通过"，而是真的把插件加载起来跑一遍:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) 在**每次**向 `main` 推送或提交 PR 时运行，构建全部三个平台。它不只检查"能否编译通过"，而是真的把插件加载起来跑一遍:
 
 - `lipo` 断言 `arm64` 与 `x86_64` 两个切片都存在，确保发布版本绝不会悄无声息地丢掉对 Intel Mac 的支持
 - `auval`(macOS)会实例化 AU、渲染音频并测试 MIDI 处理
-- [pluginval](https://github.com/Tracktion/pluginval) 以最严格的 10 级强度，对 macOS 上的 AU 与 VST3、Windows 上的 VST3 执行参数模糊测试、总线布局与线程安全检查
+- [pluginval](https://github.com/Tracktion/pluginval) 以最严格的 10 级强度，对 macOS 上的 AU 与 VST3、Windows 上的 VST3、Linux 上的 VST3(通过 `xvfb`)执行参数模糊测试、总线布局与线程安全检查
 
 [.github/workflows/release.yml](.github/workflows/release.yml) 会跑同样的校验流程，然后在你推送版本标签时打包并准备发布:
 
