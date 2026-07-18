@@ -1,5 +1,7 @@
 # PumpedUpKick
 
+![PumpedUpKick](readme-assets/PUK.png)
+
 一款免费、轻量的侧链压缩插件 —— 融合 KickStarter 的即插即用工作流与 LFOTool 式的包络控制。
 
 **AU / VST3 / Standalone** · macOS & Windows · 基于 [JUCE 8](https://juce.com) 构建 (AGPLv3)

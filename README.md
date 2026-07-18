@@ -1,5 +1,7 @@
 # PumpedUpKick
 
+![PumpedUpKick](readme-assets/PUK.png)
+
 [简体中文](README_zh-CN.md)
 
 A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow with LFOTool-style envelope control.
