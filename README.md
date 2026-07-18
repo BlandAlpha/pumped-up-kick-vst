@@ -62,6 +62,8 @@ On Windows, copy `build/PumpedUpKick_artefacts/Release/VST3/PumpedUpKick.vst3` t
 
 ## Using the MIDI one-shot trigger
 
+> Note: This part is written by Claude. Currently I cant test every DAW myself, the following instructions is **REFERNCE ONLY!!** Do not trust blindly!
+
 Sync mode needs no routing at all — insert the plugin as a normal audio effect and it locks to the beat. The **MIDI trigger** (one-shot) mode is for everything that isn't four-on-the-floor: switch **TRIGGER** to **MIDI**, and the envelope then runs exactly once per incoming Note-On (any pitch, any velocity — both are ignored) with **RATE** setting how long one shot lasts (1/4 = one beat). Between notes, audio passes through untouched. The catch: your DAW has to route MIDI notes *into an audio effect*, and every host does that differently.
 
 **Logic Pro** — audio effects can't receive MIDI in Logic, so load it as a MIDI-controlled effect:
