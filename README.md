@@ -1,5 +1,7 @@
 # PumpedUpKick
 
+[简体中文](README_zh-CN.md)
+
 A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow with LFOTool-style envelope control.
 
 **AU / VST3 / Standalone** · macOS & Windows · built with [JUCE 8](https://juce.com) (AGPLv3)
@@ -7,7 +9,8 @@ A free, lightweight sidechain-ducking plugin — KickStarter's instant workflow 
 ## Features
 
 - **One-knob workflow** — pick a preset, set the rate, turn the Mix knob. Done.
-- **BPM-synced ducking** — locks to the host timeline (1/1, 1/2, 1/4, 1/8, 1/16). Free-runs at host tempo when the transport is stopped so you can audition live.
+- **BPM-synced ducking** — locks to the host timeline (1/1, 1/2, 1/4, 1/8, 1/16). Pauses (and the playhead hides) when the host transport stops; free-runs only when there is no transport at all (standalone).
+- **Waveform display** — the last cycle's input (grey) and ducked output (orange) are drawn behind the envelope, so you see exactly what gets carved away.
 - **Full envelope editing** (LFOTool-style):
   - drag points to move them (hold **Shift** to snap to the grid)
   - **double-click** empty space to add a point
@@ -50,6 +53,12 @@ Insert PumpedUpKick as a **MIDI-controlled effect** (instrument slot → *AU MID
   Unsigned local builds work fine on your own machine (Gatekeeper only checks downloaded binaries).
 - **Windows**: build with MSVC (`cmake -G "Visual Studio 17 2022"`); code signing optional.
 - **License**: JUCE is used under AGPLv3, so this project is AGPLv3 — source must remain available. VST3 support is via Steinberg's VST3 SDK (GPLv3-compatible). "VST" is a trademark of Steinberg Media Technologies GmbH.
+
+## License
+
+Copyright (C) 2026 CanisAlpha
+
+PumpedUpKick is free software: you can redistribute it and/or modify it under the terms of the [GNU Affero General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE) for the full text.
 
 ## User presets
 

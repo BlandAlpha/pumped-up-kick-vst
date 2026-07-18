@@ -15,6 +15,8 @@
 class EnvelopeEditor : public juce::Component
 {
 public:
+    static constexpr int waveformBins = 512;
+
     std::function<void()> onCurveChanged;   // called after any edit
 
     explicit EnvelopeEditor (Curve& curveToEdit) : curve (curveToEdit)
@@ -29,8 +31,17 @@ public:
         playheadPhase  = phase;
         playheadGain   = gain;
         playheadActive = active;
-        if (changed)
+        if (changed || active)   // while running the waveform changes every frame
             repaint();
+    }
+
+    void setWaveform (const std::atomic<float>* inBins, const std::atomic<float>* outBins)
+    {
+        for (int i = 0; i < waveformBins; ++i)
+        {
+            waveIn [(size_t) i] = inBins [i].load (std::memory_order_relaxed);
+            waveOut[(size_t) i] = outBins[i].load (std::memory_order_relaxed);
+        }
     }
 
     //==========================================================================
@@ -56,6 +67,12 @@ public:
             const float y = plot.getY() + plot.getHeight() * (float) i / 4.0f;
             g.drawHorizontalLine ((int) y, plot.getX(), plot.getRight());
         }
+
+        // Waveform: input silhouette (grey) behind, ducked output (accent) on
+        // top — the gap between them is what the envelope carves away.
+        const float waveAlpha = playheadActive ? 1.0f : 0.5f;
+        drawWaveform (g, waveIn,  Palette::textDim.withAlpha (0.22f * waveAlpha), plot);
+        drawWaveform (g, waveOut, Palette::accent .withAlpha (0.38f * waveAlpha), plot);
 
         // Curve path
         juce::Path path;
@@ -229,6 +246,35 @@ private:
         return getLocalBounds().toFloat().reduced (14.0f, 12.0f);
     }
 
+    void drawWaveform (juce::Graphics& g, const std::array<float, waveformBins>& bins,
+                       juce::Colour colour, const juce::Rectangle<float>& plot) const
+    {
+        const float midY  = plot.getCentreY();
+        const float halfH = plot.getHeight() * 0.5f;
+
+        juce::Path shape;
+        shape.preallocateSpace (waveformBins * 6 + 12);
+        shape.startNewSubPath (plot.getX(), midY);
+
+        for (int i = 0; i < waveformBins; ++i)
+        {
+            const float x = plot.getX()
+                          + (float (i) + 0.5f) / (float) waveformBins * plot.getWidth();
+            shape.lineTo (x, midY - juce::jmin (1.0f, bins[(size_t) i]) * halfH);
+        }
+        shape.lineTo (plot.getRight(), midY);
+        for (int i = waveformBins - 1; i >= 0; --i)
+        {
+            const float x = plot.getX()
+                          + (float (i) + 0.5f) / (float) waveformBins * plot.getWidth();
+            shape.lineTo (x, midY + juce::jmin (1.0f, bins[(size_t) i]) * halfH);
+        }
+        shape.closeSubPath();
+
+        g.setColour (colour);
+        g.fillPath (shape);
+    }
+
     juce::Point<float> toScreen (float x, float y, const juce::Rectangle<float>& plot) const
     {
         return { plot.getX() + x * plot.getWidth(),
@@ -276,6 +322,7 @@ private:
     }
 
     Curve& curve;
+    std::array<float, waveformBins> waveIn { }, waveOut { };
     int hoverPoint = -1, hoverSegment = -1;
     int dragPoint = -1, dragSegment = -1;
     float dragStartTension = 0.0f, dragStartY = 0.0f;

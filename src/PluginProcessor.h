@@ -41,7 +41,12 @@ public:
     // For UI animation (written by audio thread, read by editor).
     std::atomic<float> uiPhase   { 0.0f };
     std::atomic<float> uiGain    { 1.0f };
-    std::atomic<bool>  uiActive  { false };  // false in MIDI mode while idle
+    std::atomic<bool>  uiActive  { false };  // envelope currently running
+
+    // Per-cycle waveform display: peak of the last cycle, binned by phase.
+    static constexpr int waveformBins = 512;
+    std::array<std::atomic<float>, waveformBins> waveIn { };   // pre-gain peaks
+    std::array<std::atomic<float>, waveformBins> waveOut { };  // post-gain peaks
 
     // Current preset display name (message thread only).
     juce::String currentPresetName { "Classic" };
@@ -60,6 +65,11 @@ private:
     bool   oneShotActive = false;   // MIDI mode: envelope currently running
     float  smoothedGain = 1.0f;
     double sampleRateHz = 44100.0;
+
+    // Waveform-binning accumulators (audio thread only).
+    int   waveBin    = -1;
+    float binPeakIn  = 0.0f;
+    float binPeakOut = 0.0f;
 
     std::atomic<float>* mixParam    = nullptr;
     std::atomic<float>* rateParam   = nullptr;

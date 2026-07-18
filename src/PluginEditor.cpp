@@ -116,6 +116,10 @@ PumpedUpKickEditor::~PumpedUpKickEditor()
 //==============================================================================
 void PumpedUpKickEditor::timerCallback()
 {
+    static_assert (PumpedUpKickProcessor::waveformBins == EnvelopeEditor::waveformBins,
+                   "waveform bin counts must match");
+
+    envelope.setWaveform (processor.waveIn.data(), processor.waveOut.data());
     envelope.setPlayhead (processor.uiPhase.load (std::memory_order_relaxed),
                           processor.uiGain.load (std::memory_order_relaxed),
                           processor.uiActive.load (std::memory_order_relaxed));

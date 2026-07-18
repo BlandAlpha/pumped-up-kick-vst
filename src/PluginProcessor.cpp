@@ -63,6 +63,11 @@ void PumpedUpKickProcessor::prepareToPlay (double sampleRate, int)
     smoothedGain  = 1.0f;
     phase         = 0.0;
     oneShotActive = false;
+
+    waveBin = -1;
+    binPeakIn = binPeakOut = 0.0f;
+    for (auto& b : waveIn)  b.store (0.0f, std::memory_order_relaxed);
+    for (auto& b : waveOut) b.store (0.0f, std::memory_order_relaxed);
 }
 
 bool PumpedUpKickProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -89,6 +94,7 @@ void PumpedUpKickProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     double bpm = fallbackBpm;
     bool hostPlaying = false;
+    bool hasTransport = false;
     double hostPpq = 0.0;
     bool hasPpq = false;
 
@@ -96,6 +102,7 @@ void PumpedUpKickProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     {
         if (auto info = playHead->getPosition())
         {
+            hasTransport = true;
             if (auto b = info->getBpm())
                 bpm = *b > 1.0 ? *b : fallbackBpm;
             hostPlaying = info->getIsPlaying();
@@ -113,8 +120,12 @@ void PumpedUpKickProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float smoothMs   = smoothParam->load();
     const float smoothCoef = std::exp (-1.0f / ((smoothMs / 1000.0f) * (float) sampleRateHz));
 
-    // Sync mode: lock phase to the host timeline at block start when playing;
-    // free-run at host BPM otherwise so you hear the pump while auditioning.
+    // Sync mode runs while the host transport plays (or when there is no
+    // transport at all, e.g. standalone — then it free-runs at fallback BPM).
+    // While the host is paused the envelope idles and gain eases back to 1.
+    const bool syncRunning = ! midiMode && (hostPlaying || ! hasTransport);
+
+    // Lock phase to the host timeline at block start when playing.
     if (! midiMode && hostPlaying && hasPpq)
     {
         double p = std::fmod (hostPpq / beats, 1.0);
@@ -124,6 +135,7 @@ void PumpedUpKickProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 
     auto midiIt = midi.begin();
+    auto* const* channels = buffer.getArrayOfWritePointers();
 
     for (int i = 0; i < numSamples; ++i)
     {
@@ -142,38 +154,56 @@ void PumpedUpKickProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         }
 
         float shape = 1.0f;
+        bool envRunning = false;
+        const float samplePhase = (float) phase;
 
-        if (midiMode)
+        if (midiMode ? oneShotActive : syncRunning)
         {
-            if (oneShotActive)
-            {
-                shape = lut.get ((float) phase);
-                phase += phaseInc;
-                if (phase >= 1.0)
-                {
-                    phase = 0.0;
-                    oneShotActive = false;
-                }
-            }
-        }
-        else
-        {
-            shape = lut.get ((float) phase);
+            envRunning = true;
+            shape = lut.get (samplePhase);
             phase += phaseInc;
             if (phase >= 1.0)
-                phase -= 1.0;
+            {
+                if (midiMode) { phase = 0.0; oneShotActive = false; }
+                else            phase -= 1.0;
+            }
         }
 
         const float target = 1.0f + mix * (shape - 1.0f);
         smoothedGain = target + (smoothedGain - target) * smoothCoef;
 
+        float inPeak = 0.0f;
         for (int ch = 0; ch < numChannels; ++ch)
-            buffer.getWritePointer (ch)[i] *= smoothedGain;
+        {
+            const float s = channels[ch][i];
+            inPeak = juce::jmax (inPeak, std::abs (s));
+            channels[ch][i] = s * smoothedGain;
+        }
+
+        // Bin pre/post peaks by phase for the waveform display. A bin is
+        // published when the phase moves past it, i.e. once per cycle.
+        if (envRunning)
+        {
+            const int bin = juce::jmin (waveformBins - 1,
+                                        (int) (samplePhase * (float) waveformBins));
+            if (bin != waveBin)
+            {
+                if (waveBin >= 0)
+                {
+                    waveIn [(size_t) waveBin].store (binPeakIn,  std::memory_order_relaxed);
+                    waveOut[(size_t) waveBin].store (binPeakOut, std::memory_order_relaxed);
+                }
+                waveBin = bin;
+                binPeakIn = binPeakOut = 0.0f;
+            }
+            binPeakIn  = juce::jmax (binPeakIn,  inPeak);
+            binPeakOut = juce::jmax (binPeakOut, inPeak * smoothedGain);
+        }
     }
 
     uiPhase.store ((float) phase, std::memory_order_relaxed);
     uiGain.store (smoothedGain, std::memory_order_relaxed);
-    uiActive.store (! midiMode || oneShotActive, std::memory_order_relaxed);
+    uiActive.store (midiMode ? oneShotActive : syncRunning, std::memory_order_relaxed);
 
     midi.clear();
 }
