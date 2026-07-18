@@ -44,7 +44,7 @@ PumpedUpKickEditor::PumpedUpKickEditor (PumpedUpKickProcessor& p)
         addAndMakeVisible (knob);
 
         label.setJustificationType (juce::Justification::centred);
-        label.setFont (lookAndFeel.getLabelFont (11.0f));
+        label.setFont (lookAndFeel.getCaptionFont (11.0f));
         addAndMakeVisible (label);
     };
     setupKnob (mixKnob, mixLabel);
@@ -89,7 +89,7 @@ PumpedUpKickEditor::PumpedUpKickEditor (PumpedUpKickProcessor& p)
         attachment->sendInitialUpdate();
 
         label.setJustificationType (juce::Justification::centred);
-        label.setFont (lookAndFeel.getLabelFont (11.0f));
+        label.setFont (lookAndFeel.getCaptionFont (11.0f));
         addAndMakeVisible (label);
     };
 

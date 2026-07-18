@@ -27,15 +27,21 @@ public:
     {
         // Special Gothic (SIL OFL 1.1) is compiled in via BinaryData, so the
         // UI renders identically regardless of what the host system has
-        // installed. Medium is the default for every control; the Condensed
-        // display cut is reserved for the logo.
+        // installed. Medium is used for every control; the Condensed display
+        // cut is reserved for the logo.
+        //
+        // Every font hook below attaches the typeface explicitly: fonts with
+        // no explicit typeface resolve through the process-wide default
+        // LookAndFeel, not the one set on this editor, so relying on
+        // setDefaultSansSerifTypeface() here would silently fall back to the
+        // system font (and mutating the global default is unsafe with
+        // multiple plugin instances in one host).
         medium    = juce::Typeface::createSystemTypefaceFor (
                         BinaryData::SpecialGothicMedium_ttf,
                         BinaryData::SpecialGothicMedium_ttfSize);
         condensed = juce::Typeface::createSystemTypefaceFor (
                         BinaryData::SpecialGothicCondensedOneRegular_ttf,
                         BinaryData::SpecialGothicCondensedOneRegular_ttfSize);
-        setDefaultSansSerifTypeface (medium);
 
         setColour (juce::ResizableWindow::backgroundColourId, Palette::background);
         setColour (juce::ComboBox::backgroundColourId, Palette::panelLight);
@@ -99,15 +105,12 @@ public:
         g.drawLine ({ base, tip }, 2.4f);
     }
 
-    juce::Font getComboBoxFont (juce::ComboBox&) override
+    // Medium with the typeface attached explicitly — see the constructor
+    // comment for why implicit resolution can't be trusted.
+    juce::Font mediumFont (float height) const
     {
-        return juce::Font (juce::FontOptions (15.0f));
-    }
-
-    // Medium already carries its weight — no synthetic bold on top of it.
-    juce::Font getTextButtonFont (juce::TextButton&, int) override
-    {
-        return juce::Font (juce::FontOptions (14.0f));
+        return juce::Font (juce::FontOptions().withTypeface (medium)
+                                              .withHeight (height));
     }
 
     // Condensed all-caps display cut; a touch of tracking opens it up.
@@ -115,14 +118,33 @@ public:
     {
         return juce::Font (juce::FontOptions().withTypeface (condensed)
                                               .withHeight (height))
-                   .withExtraKerningFactor (0.06f);
+                   .withExtraKerningFactor (0.03f);
     }
 
-    juce::Font getLabelFont (float height) const
+    // Small all-caps section captions (MIX / RATE / …).
+    juce::Font getCaptionFont (float height) const
     {
-        return juce::Font (juce::FontOptions().withTypeface (medium)
-                                              .withHeight (height))
-                   .withExtraKerningFactor (0.08f);
+        return mediumFont (height).withExtraKerningFactor (0.08f);
+    }
+
+    //==========================================================================
+    // Font hooks: every piece of text the UI draws goes through one of these.
+    juce::Font getComboBoxFont (juce::ComboBox&) override        { return mediumFont (15.0f); }
+    juce::Font getPopupMenuFont() override                       { return mediumFont (15.0f); }
+    // Medium already carries its weight — no synthetic bold on top of it.
+    juce::Font getTextButtonFont (juce::TextButton&, int) override { return mediumFont (14.0f); }
+    juce::Font getAlertWindowTitleFont() override                { return mediumFont (17.0f); }
+    juce::Font getAlertWindowMessageFont() override              { return mediumFont (15.0f); }
+    juce::Font getAlertWindowFont() override                     { return mediumFont (14.0f); }
+
+    // Covers every Label that didn't opt into a specific font — most notably
+    // the slider value boxes ("80 %", "2.0 ms").
+    juce::Font getLabelFont (juce::Label& label) override
+    {
+        const auto current = label.getFont();
+        if (current.getTypefaceName() == juce::Font::getDefaultSansSerifFontName())
+            return mediumFont (current.getHeight());
+        return current;   // keeps fonts set explicitly (e.g. the captions)
     }
 
 private:
